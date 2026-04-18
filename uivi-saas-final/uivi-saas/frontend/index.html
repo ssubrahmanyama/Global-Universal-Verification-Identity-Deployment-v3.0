@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UIVI Platform — Universal Identity & Verification Infrastructure</title>
+<style>
+:root{--bg:#050810;--s1:#0a0e1a;--s2:#0f1525;--c:#00e5ff;--g:#00ff88;--p:#8b5cf6;--r:#ff4757;--y:#ffd32a;--t:#dde6f0;--m:#4a6080;--border:rgba(0,229,255,0.12);--font:'Segoe UI',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t);font-family:var(--font);min-height:100vh}
+/* ── Login Screen ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,0.08) 0%,transparent 60%)}
+.login-box{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:440px}
+.brand{text-align:center;margin-bottom:2rem}
+.brand-logo{font-size:2rem;font-weight:900;letter-spacing:3px;background:linear-gradient(90deg,var(--c),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-sub{font-size:.75rem;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-top:.25rem}
+.portal-tabs{display:flex;background:var(--s2);border-radius:8px;padding:3px;margin-bottom:1.5rem;gap:2px}
+.pt{flex:1;padding:.5rem;text-align:center;border-radius:6px;cursor:pointer;font-size:.72rem;font-weight:600;color:var(--m);transition:.2s;letter-spacing:.5px}
+.pt.on{background:var(--c);color:#000}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.72rem;color:var(--m);margin-bottom:.35rem;letter-spacing:.5px;text-transform:uppercase}
+.field input,.field select{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--t);font-size:.9rem;outline:none;transition:.2s}
+.field input:focus,.field select:focus{border-color:var(--c)}
+.field select option{background:var(--s1)}
+.btn{width:100%;padding:.85rem;border:none;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;transition:.2s;letter-spacing:.5px}
+.btn-primary{background:linear-gradient(135deg,var(--c),#0090a8);color:#000}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.demo-hint{margin-top:1rem;padding:.75rem;background:rgba(0,229,255,.06);border:1px solid var(--border);border-radius:8px;font-size:.75rem;color:var(--m);line-height:1.7}
+.demo-hint strong{color:var(--c)}
+/* ── App Shell ── */
+#app{display:none}
+header{background:var(--s1);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100}
+.hlogo{font-weight:900;font-size:1.1rem;letter-spacing:2px;background:linear-gradient(90deg,var(--c),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.user-info{margin-left:auto;display:flex;align-items:center;gap:.75rem;font-size:.82rem}
+.role-badge{padding:3px 10px;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid}
+.rb-institution{border-color:rgba(0,229,255,.4);color:var(--c);background:rgba(0,229,255,.08)}
+.rb-hr{border-color:rgba(0,255,136,.4);color:var(--g);background:rgba(0,255,136,.08)}
+.rb-user{border-color:rgba(139,92,246,.4);color:var(--p);background:rgba(139,92,246,.08)}
+.rb-regulatory{border-color:rgba(255,215,42,.4);color:var(--y);background:rgba(255,215,42,.08)}
+.rb-fraud_monitor{border-color:rgba(255,71,87,.4);color:var(--r);background:rgba(255,71,87,.08)}
+.rb-admin{border-color:rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.08)}
+.logout-btn{background:transparent;border:1px solid var(--border);color:var(--m);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:.75rem;transition:.2s}
+.logout-btn:hover{border-color:var(--r);color:var(--r)}
+.nav-sidebar{width:220px;background:var(--s1);border-right:1px solid var(--border);min-height:calc(100vh - 52px);padding:1rem 0;flex-shrink:0}
+.layout{display:flex;min-height:calc(100vh - 52px)}
+.main-content{flex:1;padding:1.5rem;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;cursor:pointer;color:var(--m);font-size:.85rem;transition:.2s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--t);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--c);border-left-color:var(--c);background:rgba(0,229,255,.05)}
+.nav-icon{font-size:1rem;width:20px;text-align:center}
+.nav-sep{height:1px;background:var(--border);margin:.5rem 1rem}
+/* ── Cards ── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.25rem}
+.card-title{font-size:.75rem;font-weight:700;color:var(--c);letter-spacing:2px;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1.1rem;text-align:center}
+.stat-v{font-size:2rem;font-weight:800}
+.stat-l{font-size:.65rem;color:var(--m);letter-spacing:1px;text-transform:uppercase;margin-top:.25rem}
+/* ── Forms ── */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:.875rem}
+.fg1{grid-template-columns:1fr}
+.ff{display:flex;flex-direction:column;gap:.35rem}
+.ff label{font-size:.68rem;color:var(--m);letter-spacing:.5px;text-transform:uppercase}
+.ff input,.ff select,.ff textarea{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:.65rem .875rem;color:var(--t);font-size:.875rem;outline:none;transition:.2s}
+.ff input:focus,.ff select:focus{border-color:var(--c)}
+.ff select option{background:var(--s1)}
+.btn-sm{padding:.6rem 1.25rem;border:none;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;transition:.2s;letter-spacing:.5px}
+.btn-c{background:linear-gradient(135deg,#00c8e0,var(--c));color:#000}
+.btn-g{background:linear-gradient(135deg,#00cc70,var(--g));color:#000}
+.btn-p{background:linear-gradient(135deg,#7c3aed,var(--p));color:#fff}
+.btn-r{background:linear-gradient(135deg,#e03040,var(--r));color:#fff}
+.btn-o{background:transparent;border:1px solid var(--border);color:var(--t)}
+.btn-sm:hover{transform:translateY(-1px);opacity:.9}
+/* ── Table ── */
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.tbl th{background:rgba(0,229,255,.06);padding:.65rem 1rem;text-align:left;font-size:.65rem;color:var(--m);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
+.tbl td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+/* ── Result boxes ── */
+.result{border-radius:10px;padding:1.25rem;margin-top:1rem;border-left:4px solid;display:none}
+.result.show{display:block}
+.rv{border-color:var(--g);background:rgba(0,255,136,.06)}
+.ri{border-color:var(--r);background:rgba(255,71,87,.06)}
+.rw{border-color:var(--y);background:rgba(255,211,42,.06)}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
+.ri-item label{font-size:.65rem;color:var(--m);text-transform:uppercase}
+.ri-item span{display:block;font-weight:600;margin-top:2px}
+/* ── Alert badge ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.65rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.badge-ok{background:rgba(0,255,136,.15);color:var(--g)}
+.badge-err{background:rgba(255,71,87,.15);color:var(--r)}
+.badge-warn{background:rgba(255,211,42,.15);color:var(--y)}
+.badge-info{background:rgba(0,229,255,.15);color:var(--c)}
+/* ── Spinner ── */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--c);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── Toast ── */
+#toasts{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+.toast{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:.75rem 1.1rem;font-size:.82rem;transform:translateX(120%);transition:.3s cubic-bezier(.34,1.56,.64,1);min-width:220px}
+.toast.show{transform:none}
+.toast.tok{border-left:3px solid var(--g)}.toast.terr{border-left:3px solid var(--r)}.toast.tinf{border-left:3px solid var(--c)}
+@media(max-width:700px){.fg{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.nav-sidebar{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+<div class="login-box">
+  <div class="brand">
+    <div class="brand-logo">⚡ UIVI</div>
+    <div class="brand-sub">Universal Identity & Verification Infrastructure</div>
+  </div>
+
+  <div class="portal-tabs" id="portal-tabs">
+    <div class="pt on" onclick="selPortal('institution')">🏛 Institution</div>
+    <div class="pt" onclick="selPortal('hr')">🏢 HR</div>
+    <div class="pt" onclick="selPortal('user')">👤 User</div>
+    <div class="pt" onclick="selPortal('regulatory')">⚖️ Regulatory</div>
+    <div class="pt" onclick="selPortal('fraud_monitor')">🛡 Fraud L1</div>
+  </div>
+
+  <div class="field">
+    <label>Organization / Tenant Slug</label>
+    <input id="l-slug" placeholder="e.g. iit-bombay, google-hr" value="iit-bombay"/>
+  </div>
+  <div class="field">
+    <label>Email</label>
+    <input id="l-email" type="email" placeholder="your@email.com" value="issuer@iit-bombay.uivi.app"/>
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input id="l-pass" type="password" placeholder="••••••••" value="Demo@1234"/>
+  </div>
+  <button class="btn btn-primary" onclick="doLogin()" id="l-btn">Login to UIVI</button>
+
+  <div class="demo-hint">
+    <strong>Demo Accounts</strong> (password: <strong>Demo@1234</strong>)<br>
+    🏛 issuer@iit-bombay.uivi.app | tenant: <strong>iit-bombay</strong><br>
+    🏢 hr@google-hr.uivi.app | tenant: <strong>google-hr</strong><br>
+    👤 student@iit-bombay.uivi.app | tenant: <strong>iit-bombay</strong><br>
+    ⚖️ regulator@naac-reg.uivi.app | tenant: <strong>naac-reg</strong><br>
+    🛡 analyst@fraud-l1.uivi.app | tenant: <strong>fraud-l1</strong>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app">
+<header>
+  <div class="hlogo">⚡ UIVI Platform</div>
+  <div style="font-size:.75rem;color:var(--m)" id="h-tenant"></div>
+  <div class="user-info">
+    <span id="h-name" style="font-size:.82rem"></span>
+    <span class="role-badge" id="h-role-badge"></span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="nav-sidebar" id="sidebar"></nav>
+  <main class="main-content" id="content"></main>
+</div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+const API = '';
+let token = '', user = {};
+
+// ── Portal presets ─────────────────────────────────────────────
+const PORTALS = {
+  institution: {slug:'iit-bombay', email:'issuer@iit-bombay.uivi.app'},
+  hr:          {slug:'google-hr',  email:'hr@google-hr.uivi.app'},
+  user:        {slug:'iit-bombay', email:'student@iit-bombay.uivi.app'},
+  regulatory:  {slug:'naac-reg',   email:'regulator@naac-reg.uivi.app'},
+  fraud_monitor:{slug:'fraud-l1',  email:'analyst@fraud-l1.uivi.app'},
+};
+
+function selPortal(p) {
+  document.querySelectorAll('.pt').forEach((t,i)=>t.classList.toggle('on', Object.keys(PORTALS)[i]===p));
+  const d = PORTALS[p];
+  document.getElementById('l-slug').value = d.slug;
+  document.getElementById('l-email').value = d.email;
+}
+
+// ── Login ──────────────────────────────────────────────────────
+async function doLogin() {
+  const btn = document.getElementById('l-btn');
+  btn.textContent = 'Logging in...'; btn.disabled = true;
+  const res = await fetch(`${API}/api/v1/auth/login`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      tenant_slug: document.getElementById('l-slug').value.trim(),
+      email: document.getElementById('l-email').value.trim(),
+      password: document.getElementById('l-pass').value,
+    })
+  });
+  btn.textContent = 'Login to UIVI'; btn.disabled = false;
+  if (!res.ok) { const e = await res.json(); toast(e.error||'Login failed','err'); return; }
+  const data = await res.json();
+  token = data.token; user = data;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initApp();
+}
+
+function logout() {
+  token = ''; user = {};
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ── App init ───────────────────────────────────────────────────
+function initApp() {
+  const rbClass = 'rb-'+user.role;
+  document.getElementById('h-tenant').textContent = `${user.tenant_name} (${user.tenant_slug})`;
+  document.getElementById('h-name').textContent = user.full_name;
+  const rb = document.getElementById('h-role-badge');
+  rb.className = `role-badge ${rbClass}`;
+  rb.textContent = user.role.replace('_',' ');
+  buildSidebar();
+  navTo(getDefaultPage());
+}
+
+function getDefaultPage() {
+  const defaults = {institution:'issue-cert',hr:'verify',user:'my-profile',regulatory:'reg-dashboard',fraud_monitor:'fraud-dash',admin:'tenants'};
+  return defaults[user.role] || 'my-profile';
+}
+
+// ── Sidebar per role ────────────────────────────────────────────
+const NAV_ITEMS = {
+  institution: [
+    {id:'issue-cert',    icon:'📜', label:'Issue Certificate'},
+    {id:'cert-list',     icon:'📋', label:'My Certificates'},
+    {id:'my-profile',    icon:'👤', label:'My Profile'},
+    {id:'audit-trail',   icon:'📊', label:'Audit Trail'},
+  ],
+  hr: [
+    {id:'verify',        icon:'🔍', label:'Verify Candidate'},
+    {id:'batch-verify',  icon:'📦', label:'Batch Verify'},
+    {id:'verif-history', icon:'📋', label:'Verification History'},
+    {id:'hr-dashboard',  icon:'📊', label:'Dashboard'},
+    {id:'my-profile',    icon:'👤', label:'My Profile'},
+  ],
+  user: [
+    {id:'my-profile',    icon:'👤', label:'My Profile'},
+    {id:'audit-trail',   icon:'📊', label:'My UIVI Audit Trail'},
+    {id:'consent',       icon:'🔒', label:'Consent Settings'},
+    {id:'recovery',      icon:'🔑', label:'Account Recovery'},
+  ],
+  regulatory: [
+    {id:'reg-dashboard', icon:'📊', label:'Platform Dashboard'},
+    {id:'institutions',  icon:'🏛', label:'Institutions'},
+    {id:'compliance',    icon:'⚖️', label:'Compliance'},
+    {id:'audit-trail',   icon:'📋', label:'Audit Logs'},
+    {id:'my-profile',    icon:'👤', label:'My Profile'},
+  ],
+  fraud_monitor: [
+    {id:'fraud-dash',    icon:'🛡', label:'Fraud Dashboard'},
+    {id:'fraud-alerts',  icon:'🚨', label:'Active Alerts'},
+    {id:'fraud-graph',   icon:'🕸', label:'Fraud Graph'},
+    {id:'my-profile',    icon:'👤', label:'My Profile'},
+  ],
+  admin: [
+    {id:'tenants',       icon:'🏢', label:'All Tenants'},
+    {id:'reg-dashboard', icon:'📊', label:'Platform Stats'},
+    {id:'my-profile',    icon:'👤', label:'My Profile'},
+  ],
+};
+
+function buildSidebar() {
+  const items = NAV_ITEMS[user.role] || NAV_ITEMS.user;
+  document.getElementById('sidebar').innerHTML = items.map(i=>
+    `<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}')">
+      <span class="nav-icon">${i.icon}</span>${i.label}
+    </div>`).join('');
+}
+
+let currentPage = '';
+function navTo(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const nav = document.getElementById('nav-'+page);
+  if(nav) nav.classList.add('active');
+  const pages = {
+    'issue-cert': pageIssueCert,
+    'cert-list':  pageCertList,
+    'verify':     pageVerify,
+    'batch-verify':pageBatchVerify,
+    'verif-history':pageVerifHistory,
+    'hr-dashboard':pageHRDashboard,
+    'my-profile': pageMyProfile,
+    'audit-trail':pageAuditTrail,
+    'consent':    pageConsent,
+    'recovery':   pageRecovery,
+    'reg-dashboard':pageRegDashboard,
+    'institutions':pageInstitutions,
+    'compliance': pageCompliance,
+    'fraud-dash': pageFraudDash,
+    'fraud-alerts':pageFraudAlerts,
+    'fraud-graph':pageFraudGraph,
+    'tenants':    pageTenants,
+  };
+  if(pages[page]) pages[page]();
+}
+
+// ── API helper ─────────────────────────────────────────────────
+async function api(method, path, body) {
+  const r = await fetch(API+path, {method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:body?JSON.stringify(body):undefined});
+  return {ok:r.ok, status:r.status, data: await r.json().catch(()=>({}))};
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(msg,type='inf') {
+  const el = document.createElement('div');
+  el.className = `toast t${type}`;
+  el.textContent = (type==='ok'?'✓ ':type==='err'?'✗ ':'• ')+msg;
+  document.getElementById('toasts').appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),400)},4000);
+}
+
+function html(c) { document.getElementById('content').innerHTML = c; }
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Issue Certificate (Institution)
+// ══════════════════════════════════════════════════════════
+function pageIssueCert() {
+  html(`
+  <div class="card">
+    <div class="card-title">📜 Issue Certificate</div>
+    <div class="fg" style="margin-bottom:.875rem">
+      <div class="ff"><label>Holder Full Name</label><input id="ic-name" placeholder="Rahul Kumar Sharma"/></div>
+      <div class="ff"><label>Holder Email</label><input id="ic-email" type="email" placeholder="student@email.com"/></div>
+      <div class="ff"><label>Roll Number</label><input id="ic-roll" placeholder="IIT-2024-CS-001"/></div>
+      <div class="ff"><label>Date of Birth</label><input id="ic-dob" type="date"/></div>
+      <div class="ff"><label>Degree Type</label>
+        <select id="ic-dtype"><option>B.Tech</option><option>M.Tech</option><option>B.Sc</option><option>M.Sc</option><option>MBA</option><option>Ph.D</option><option>Diploma</option></select>
+      </div>
+      <div class="ff"><label>Degree Name</label><input id="ic-dname" placeholder="Computer Science & Engineering"/></div>
+      <div class="ff"><label>Specialization</label><input id="ic-spec" placeholder="Artificial Intelligence"/></div>
+      <div class="ff"><label>Passing Year</label><input id="ic-year" type="number" value="2024" min="1990" max="2030"/></div>
+      <div class="ff"><label>Grade / Classification</label><input id="ic-grade" placeholder="First Class with Distinction"/></div>
+    </div>
+    <button class="btn-sm btn-c" onclick="issueCert()" id="ic-btn">📜 Issue Certificate</button>
+    <div class="result" id="ic-result"></div>
+  </div>`);
+}
+
+async function issueCert() {
+  const btn = document.getElementById('ic-btn');
+  btn.innerHTML = '<span class="spin"></span> Issuing...'; btn.disabled = true;
+  const {ok,data} = await api('POST','/api/v1/institution/certificate/issue',{
+    holder_name: document.getElementById('ic-name').value,
+    holder_email: document.getElementById('ic-email').value,
+    holder_dob: document.getElementById('ic-dob').value,
+    degree_type: document.getElementById('ic-dtype').value,
+    degree_name: document.getElementById('ic-dname').value,
+    specialization: document.getElementById('ic-spec').value,
+    roll_number: document.getElementById('ic-roll').value,
+    passing_year: parseInt(document.getElementById('ic-year').value),
+    grade: document.getElementById('ic-grade').value,
+  });
+  btn.innerHTML = '📜 Issue Certificate'; btn.disabled = false;
+  const res = document.getElementById('ic-result');
+  res.className = `result show ${ok?'rv':'ri'}`;
+  if(ok) {
+    res.innerHTML = `<strong style="color:var(--g)">✅ Certificate Issued Successfully!</strong>
+    <div class="result-grid">
+      <div class="ri-item"><label>UIVID</label><span style="color:var(--c);font-size:1.1rem;font-weight:800">${data.uivid}</span></div>
+      <div class="ri-item"><label>Holder</label><span>${data.holder_name}</span></div>
+      <div class="ri-item"><label>Degree</label><span>${data.degree_type}</span></div>
+      <div class="ri-item"><label>Issued By</label><span>${data.issued_by}</span></div>
+      <div class="ri-item"><label>Credential Hash</label><span style="font-size:.72rem;color:var(--m)">${data.credential_hash}</span></div>
+    </div>
+    <p style="margin-top:.75rem;font-size:.82rem;color:var(--m)">Share the UIVID with the certificate holder. They can use it for future verifications.</p>`;
+    toast('Certificate issued: '+data.uivid,'ok');
+  } else {
+    res.innerHTML = `<strong style="color:var(--r)">❌ ${data.error}</strong>`;
+    toast(data.error,'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Certificate List
+// ══════════════════════════════════════════════════════════
+async function pageCertList() {
+  html(`<div class="card"><div class="card-title">📋 Issued Certificates</div><div id="clist">Loading...</div></div>`);
+  const {ok,data} = await api('GET','/api/v1/institution/certificates');
+  if(!ok) { document.getElementById('clist').textContent = 'Failed to load'; return; }
+  const certs = data.certificates || [];
+  document.getElementById('clist').innerHTML = certs.length === 0 ? '<p style="color:var(--m)">No certificates yet.</p>' : `
+  <table class="tbl"><thead><tr><th>UIVID</th><th>Holder</th><th>Degree</th><th>Year</th><th>Status</th><th>Issued</th></tr></thead>
+  <tbody>${certs.map(c=>`<tr>
+    <td style="color:var(--c);font-weight:700">${c.uivid}</td>
+    <td>${c.holder_name}</td><td>${c.degree_type}</td><td>${c.passing_year}</td>
+    <td><span class="badge badge-${c.status==='active'?'ok':'err'}">${c.status}</span></td>
+    <td style="color:var(--m);font-size:.78rem">${c.created_at?.slice(0,10)}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Verify (HR)
+// ══════════════════════════════════════════════════════════
+function pageVerify() {
+  html(`
+  <div class="card">
+    <div class="card-title">🔍 Verify Candidate Certificate</div>
+    <p style="color:var(--m);font-size:.85rem;margin-bottom:1.25rem">Enter the UIVID from the candidate's certificate and their full name. Result is verified cross-platform.</p>
+    <div class="fg" style="margin-bottom:.875rem">
+      <div class="ff"><label>UIVID</label><input id="vr-uivid" placeholder="UIVI-2024-XXXXXX" oninput="this.value=this.value.toUpperCase()"/></div>
+      <div class="ff"><label>Candidate Name (from resume)</label><input id="vr-name" placeholder="Full name as given"/></div>
+      <div class="ff"><label>Purpose</label>
+        <select id="vr-purpose"><option value="background_check">Background Check</option><option value="hiring">Pre-Hire</option><option value="compliance">Compliance</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-bottom:.75rem">
+      <button class="btn-sm btn-g" onclick="doVerify()" id="vr-btn">🔍 Verify on UIVI</button>
+      <button class="btn-sm btn-o" onclick="fillDemoVerify()">Demo UIVID</button>
+    </div>
+    <div class="result" id="vr-result"></div>
+  </div>`);
+}
+
+function fillDemoVerify() {
+  document.getElementById('vr-uivid').value = 'UIVI-2024-DEMO01';
+  document.getElementById('vr-name').value = 'Rahul Mehta';
+}
+
+async function doVerify() {
+  const btn = document.getElementById('vr-btn');
+  btn.innerHTML = '<span class="spin"></span> Verifying...'; btn.disabled = true;
+  const {ok,data} = await api('POST','/api/v1/hr/verify',{
+    uivid: document.getElementById('vr-uivid').value.trim(),
+    candidate_name: document.getElementById('vr-name').value.trim(),
+    purpose: document.getElementById('vr-purpose').value,
+  });
+  btn.innerHTML = '🔍 Verify on UIVI'; btn.disabled = false;
+  const res = document.getElementById('vr-result');
+  const valid = data.credential_valid;
+  res.className = `result show ${valid?'rv':data.is_revoked?'rw':'ri'}`;
+  res.innerHTML = `
+    <strong style="color:${valid?'var(--g)':'var(--r)'};font-size:1rem">${data.message}</strong>
+    <div class="result-grid" style="margin-top:.875rem">
+      <div class="ri-item"><label>Credential Valid</label><span style="color:${valid?'var(--g)':'var(--r)'}">${valid?'✓ VALID':'✗ INVALID'}</span></div>
+      <div class="ri-item"><label>Name Match</label><span style="color:${data.name_match?'var(--g)':'var(--r)'}">${data.name_match?'✓ MATCHED':'✗ MISMATCH'}</span></div>
+      ${data.institution?`<div class="ri-item"><label>Institution</label><span>${data.institution}</span></div>`:''}
+      ${data.degree_type?`<div class="ri-item"><label>Degree</label><span>${data.degree_type}</span></div>`:''}
+      ${data.passing_year?`<div class="ri-item"><label>Passing Year</label><span>${data.passing_year}</span></div>`:''}
+      ${data.holder_name?`<div class="ri-item"><label>Holder on Record</label><span>${data.holder_name}</span></div>`:''}
+      <div class="ri-item"><label>Verified At</label><span style="color:var(--m);font-size:.78rem">${new Date().toLocaleString('en-IN')}</span></div>
+    </div>`;
+  toast(valid?'Verified ✓':'Verification failed','err' in data || !valid?'err':'ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Batch Verify
+// ══════════════════════════════════════════════════════════
+function pageBatchVerify() {
+  html(`<div class="card"><div class="card-title">📦 Batch Verify</div>
+  <p style="color:var(--m);font-size:.83rem;margin-bottom:1rem">CSV format: UIVID,Candidate Name (one per line, max 50)</p>
+  <textarea id="bv-input" style="width:100%;height:120px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.875rem;color:var(--t);font-size:.82rem;resize:vertical;outline:none"
+    placeholder="UIVI-2024-DEMO01,Rahul Mehta&#10;UIVI-2024-DEMO02,Priya Singh"></textarea>
+  <button class="btn-sm btn-g" onclick="doBatch()" style="margin-top:.75rem">⚡ Run Batch</button>
+  <div id="bv-result" style="margin-top:1rem"></div></div>`);
+}
+
+async function doBatch() {
+  const raw = document.getElementById('bv-input').value.trim();
+  const candidates = raw.split('\n').filter(Boolean).map(l=>{
+    const [uivid,...rest] = l.split(',');
+    return {uivid:uivid.trim().toUpperCase(),candidate_name:rest.join(',').trim(),purpose:'background_check'};
+  });
+  const {ok,data} = await api('POST','/api/v1/hr/verify/batch',{candidates});
+  if(!ok){toast('Batch failed','err');return;}
+  const s = data.summary||{};
+  document.getElementById('bv-result').innerHTML = `
+  <div style="padding:1rem;background:var(--s2);border-radius:8px;margin-bottom:.875rem">
+    <strong>Batch Complete — ${data.processed} processed</strong>&nbsp;
+    <span class="badge badge-ok">✓ ${s.valid} valid</span>&nbsp;
+    <span class="badge badge-err">✗ ${s.invalid} invalid</span>
+  </div>
+  <table class="tbl"><thead><tr><th>UIVID</th><th>Candidate</th><th>Valid</th><th>Message</th></tr></thead>
+  <tbody>${(data.results||[]).map(r=>`<tr>
+    <td style="color:var(--c)">${r.uivid}</td>
+    <td>${r.candidate_name||'—'}</td>
+    <td><span class="badge badge-${r.credential_valid?'ok':'err'}">${r.credential_valid?'VALID':'INVALID'}</span></td>
+    <td style="font-size:.78rem;color:var(--m)">${r.message?.slice(0,50)}...</td>
+  </tr>`).join('')}</tbody></table>`;
+  toast(`Batch: ${s.valid} valid, ${s.invalid} invalid`,'ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Verification History
+// ══════════════════════════════════════════════════════════
+async function pageVerifHistory() {
+  html(`<div class="card"><div class="card-title">📋 Verification History</div><div id="vh-list">Loading...</div></div>`);
+  const {ok,data} = await api('GET','/api/v1/hr/verifications');
+  const list = data.verifications||[];
+  document.getElementById('vh-list').innerHTML = list.length===0?'<p style="color:var(--m)">No verifications yet.</p>':
+  `<table class="tbl"><thead><tr><th>UIVID</th><th>Candidate</th><th>Result</th><th>When</th></tr></thead>
+  <tbody>${list.map(v=>`<tr>
+    <td style="color:var(--c)">${v.uivid}</td><td>${v.candidate_name}</td>
+    <td><span class="badge badge-${v.result_valid?'ok':'err'}">${v.result_valid?'VALID':'INVALID'}</span></td>
+    <td style="color:var(--m);font-size:.78rem">${new Date(v.verified_at).toLocaleString('en-IN')}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: HR Dashboard
+// ══════════════════════════════════════════════════════════
+async function pageHRDashboard() {
+  html(`<div class="stats-grid" id="hr-stats">Loading...</div>`);
+  const {data} = await api('GET','/api/v1/hr/dashboard');
+  document.getElementById('hr-stats').innerHTML = `
+    <div class="stat"><div class="stat-v" style="color:var(--c)">${data.total_verifications||0}</div><div class="stat-l">Total Checks</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--g)">${data.valid||0}</div><div class="stat-l">Valid</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--r)">${data.invalid||0}</div><div class="stat-l">Fraud Caught</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: My Profile
+// ══════════════════════════════════════════════════════════
+async function pageMyProfile() {
+  html(`<div id="profile-content">Loading...</div>`);
+  const {ok,data} = await api('GET','/api/v1/user/profile');
+  document.getElementById('profile-content').innerHTML = `
+  <div class="card"><div class="card-title">👤 My Profile</div>
+  <div class="fg">
+    <div class="ff"><label>Full Name</label><input readonly value="${data.full_name||user.full_name}"/></div>
+    <div class="ff"><label>Email</label><input readonly value="${data.email||user.email}"/></div>
+    <div class="ff"><label>Role</label><input readonly value="${data.role||user.role}"/></div>
+    <div class="ff"><label>Organisation</label><input readonly value="${user.tenant_name} (${user.tenant_slug})"/></div>
+    <div class="ff"><label>Member Since</label><input readonly value="${data.member_since?.slice(0,10)||'—'}"/></div>
+  </div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Audit Trail
+// ══════════════════════════════════════════════════════════
+async function pageAuditTrail() {
+  const ep = user.role==='regulatory'?'/api/v1/regulatory/audit-logs':'/api/v1/user/audit-trail';
+  html(`<div class="card"><div class="card-title">📊 Audit Trail</div><div id="at-list">Loading...</div></div>`);
+  const {data} = await api('GET',ep);
+  const events = data.audit_trail||[];
+  document.getElementById('at-list').innerHTML = events.length===0?'<p style="color:var(--m)">No events yet.</p>':
+  `<table class="tbl"><thead><tr><th>Action</th><th>Details</th><th>Timestamp</th></tr></thead>
+  <tbody>${events.map(e=>`<tr>
+    <td><span class="badge badge-info">${e.action}</span></td>
+    <td style="font-size:.78rem;color:var(--m)">${e.details||'{}'}</td>
+    <td style="color:var(--m);font-size:.78rem">${new Date(e.timestamp).toLocaleString('en-IN')}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Consent
+// ══════════════════════════════════════════════════════════
+function pageConsent() {
+  html(`<div class="card"><div class="card-title">🔒 Consent Settings</div>
+  <p style="color:var(--m);font-size:.85rem;margin-bottom:1.25rem">Control how your identity data is accessed.</p>
+  <div class="ff" style="margin-bottom:1rem"><label>Consent Mode</label>
+    <select id="cs-mode">
+      <option value="PASSIVE">PASSIVE — Auto-approve, see log</option>
+      <option value="ACTIVE">ACTIVE — Approve every access</option>
+      <option value="SILENT">SILENT — Restricted, pre-approved only</option>
+    </select>
+  </div>
+  <button class="btn-sm btn-c" onclick="saveConsent()">Save Consent Mode</button></div>`);
+}
+
+async function saveConsent() {
+  const mode = document.getElementById('cs-mode').value;
+  const {ok} = await api('POST','/api/v1/user/consent',{mode});
+  toast(ok?`Consent set to ${mode}`:'Failed to save', ok?'ok':'err');
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Recovery
+// ══════════════════════════════════════════════════════════
+function pageRecovery() {
+  html(`<div class="card"><div class="card-title">🔑 Account Recovery</div>
+  <div class="fg fg1" style="margin-bottom:.875rem">
+    <div class="ff"><label>Your UIVID</label><input id="rc-uivid" placeholder="UIVI-2024-XXXXXX"/></div>
+    <div class="ff"><label>Recovery Email</label><input id="rc-email" type="email" placeholder="your@email.com"/></div>
+    <div class="ff"><label>Guardian 1 ID</label><input id="rc-g1" placeholder="Guardian email or ID"/></div>
+    <div class="ff"><label>Guardian 2 ID</label><input id="rc-g2" placeholder="Guardian email or ID"/></div>
+    <div class="ff"><label>Guardian 3 ID</label><input id="rc-g3" placeholder="Guardian email or ID (optional)"/></div>
+  </div>
+  <button class="btn-sm btn-p" onclick="initiateRecovery()">Initiate Recovery (2-of-3 Guardian)</button>
+  <div id="rc-result" class="result"></div></div>`);
+}
+
+async function initiateRecovery() {
+  const guardians = [document.getElementById('rc-g1').value, document.getElementById('rc-g2').value, document.getElementById('rc-g3').value].filter(Boolean);
+  const {ok,data} = await api('POST','/api/v1/recovery/initiate',{
+    uivid: document.getElementById('rc-uivid').value,
+    tenant_slug: user.tenant_slug,
+    email: document.getElementById('rc-email').value,
+    guardians,
+  });
+  const res = document.getElementById('rc-result');
+  res.className = `result show ${ok?'rv':'ri'}`;
+  res.innerHTML = ok?`✅ Recovery initiated. Request ID: <strong>${data.request_id}</strong>. Guardians notified. Threshold: 2/3 approvals needed.`:`❌ ${data.error}`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Regulatory Dashboard
+// ══════════════════════════════════════════════════════════
+async function pageRegDashboard() {
+  html(`<div class="stats-grid" id="reg-stats">Loading...</div><div class="card" id="reg-comp"></div>`);
+  const [{data:stats},{data:comp}] = await Promise.all([api('GET','/api/v1/regulatory/stats'),api('GET','/api/v1/regulatory/compliance')]);
+  document.getElementById('reg-stats').innerHTML = `
+    <div class="stat"><div class="stat-v" style="color:var(--c)">${stats.active_tenants||0}</div><div class="stat-l">Active Orgs</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--g)">${stats.compliance_score||94}%</div><div class="stat-l">Compliance Score</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--g)">${stats.dpdp_compliant?'✓':'-'}</div><div class="stat-l">DPDP 2023</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--g)">${stats.gdpr_compliant?'✓':'-'}</div><div class="stat-l">GDPR</div></div>`;
+  const rc = document.getElementById('reg-comp');
+  rc.innerHTML = `<div class="card-title">⚖️ Compliance Status</div>` + Object.entries(comp).map(([k,v])=>`
+    <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.83rem">
+      <span style="color:var(--m)">${k.replace(/_/g,' ')}</span>
+      <span class="badge badge-${v===true||v==='compliant'?'ok':'info'}">${v===true?'✓ YES':v===false?'✗ NO':v}</span>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Institutions list (Regulatory)
+// ══════════════════════════════════════════════════════════
+async function pageInstitutions() {
+  html(`<div class="card"><div class="card-title">🏛 Registered Institutions</div><div id="inst-list">Loading...</div></div>`);
+  const {data} = await api('GET','/api/v1/regulatory/institutions');
+  const list = data.institutions||[];
+  document.getElementById('inst-list').innerHTML = `<table class="tbl"><thead><tr><th>Name</th><th>Slug</th><th>Country</th><th>Status</th><th>Joined</th></tr></thead>
+  <tbody>${list.map(i=>`<tr><td>${i.name}</td><td style="color:var(--c)">${i.slug}</td><td>${i.country}</td>
+    <td><span class="badge badge-${i.status==='active'?'ok':'warn'}">${i.status}</span></td>
+    <td style="color:var(--m);font-size:.78rem">${i.joined?.slice(0,10)}</td></tr>`).join('')||'<tr><td colspan="5" style="color:var(--m);text-align:center;padding:1.5rem">No institutions yet</td></tr>'}
+  </tbody></table>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Compliance
+// ══════════════════════════════════════════════════════════
+async function pageCompliance() {
+  const {data} = await api('GET','/api/v1/regulatory/compliance');
+  html(`<div class="card"><div class="card-title">⚖️ Compliance Report</div>
+  ${Object.entries(data).map(([k,v])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:.85rem">${k.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}</span>
+      <span class="badge badge-${v===true||v==='compliant'?'ok':'info'}">${v===true?'✓ Compliant':v===false?'✗ Non-Compliant':v}</span>
+    </div>`).join('')}</div>`);
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Fraud Dashboard
+// ══════════════════════════════════════════════════════════
+async function pageFraudDash() {
+  html(`<div class="stats-grid" id="fd-stats">Loading...</div>`);
+  const {data} = await api('GET','/api/v1/fraud-monitor/dashboard');
+  document.getElementById('fd-stats').innerHTML = `
+    <div class="stat"><div class="stat-v" style="color:var(--c)">${data.total_checks||0}</div><div class="stat-l">Total Checks</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--r)">${data.flagged||0}</div><div class="stat-l">Flagged</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--r)">${data.critical||0}</div><div class="stat-l">Critical</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--g)">${data.clean||0}</div><div class="stat-l">Clean</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Fraud Alerts
+// ══════════════════════════════════════════════════════════
+async function pageFraudAlerts() {
+  html(`<div class="card"><div class="card-title">🚨 Active Fraud Alerts</div><div id="fa-list">Loading...</div></div>`);
+  const {data} = await api('GET','/api/v1/fraud-monitor/alerts');
+  const alerts = data.alerts||[];
+  document.getElementById('fa-list').innerHTML = alerts.length===0?'<p style="color:var(--m)">No active alerts.</p>':
+  `<table class="tbl"><thead><tr><th>ID</th><th>UIVID</th><th>Risk</th><th>Level</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>${alerts.map(a=>`<tr>
+    <td style="font-size:.72rem;color:var(--m)">${a.id?.slice(0,8)}…</td>
+    <td style="color:var(--c)">${a.uivid||'—'}</td>
+    <td>${a.risk_score}</td>
+    <td><span class="badge badge-${a.risk_level==='CRITICAL'?'err':a.risk_level==='HIGH'?'err':'warn'}">${a.risk_level}</span></td>
+    <td><span class="badge badge-warn">${a.status}</span></td>
+    <td><button class="btn-sm btn-r" style="font-size:.7rem;padding:3px 8px" onclick="reportAlert('${a.id}')">Report</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function reportAlert(id) {
+  await api('POST',`/api/v1/fraud-monitor/alerts/${id}/report`,{action:'escalated',notes:'L1 review complete'});
+  toast('Alert escalated','ok'); pageFraudAlerts();
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Fraud Graph
+// ══════════════════════════════════════════════════════════
+async function pageFraudGraph() {
+  html(`<div class="card"><div class="card-title">🕸 Fraud Relationship Graph</div>
+  <p style="color:var(--m);font-size:.83rem;margin-bottom:1rem">Nodes: UIVID, Device, IP, Verifier. Edges: relationships detected by fraud engine.</p>
+  <div id="fg-content">Loading...</div></div>`);
+  const {data} = await api('GET','/api/v1/fraud-monitor/graph');
+  const nodes = data.nodes||[], edges = data.edges||[];
+  document.getElementById('fg-content').innerHTML = nodes.length===0?'<p style="color:var(--m)">No graph data yet. Run verifications to build the graph.</p>':
+  `<div style="display:flex;gap:1rem;flex-wrap:wrap">
+    <div><strong style="font-size:.75rem;color:var(--m)">NODES (${nodes.length})</strong>
+    ${nodes.map(n=>`<div style="padding:.35rem .75rem;background:var(--s2);border-radius:6px;margin-top:.35rem;font-size:.78rem">
+      <span class="badge badge-info">${n.type}</span> ${n.id}</div>`).join('')}</div>
+    <div><strong style="font-size:.75rem;color:var(--m)">EDGES (${edges.length})</strong>
+    ${edges.map(e=>`<div style="padding:.35rem .75rem;background:var(--s2);border-radius:6px;margin-top:.35rem;font-size:.78rem;color:var(--m)">${e.from} → ${e.to}</div>`).join('')}</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PAGE: Tenants (Admin)
+// ══════════════════════════════════════════════════════════
+async function pageTenants() {
+  html(`<div class="card"><div class="card-title">🏢 All Tenants</div><div id="tl">Loading...</div></div>`);
+  const {data} = await api('GET','/api/v1/admin/tenants');
+  const tenants = data.tenants||[];
+  document.getElementById('tl').innerHTML = `<table class="tbl"><thead><tr><th>Name</th><th>Slug</th><th>Type</th><th>Country</th><th>Plan</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>${tenants.map(t=>`<tr><td>${t.name}</td><td style="color:var(--c)">${t.slug}</td><td>${t.org_type}</td><td>${t.country}</td>
+    <td><span class="badge badge-info">${t.plan}</span></td>
+    <td><span class="badge badge-${t.status==='active'?'ok':'warn'}">${t.status}</span></td>
+    <td>${t.status==='pending'?`<button class="btn-sm btn-g" style="font-size:.7rem;padding:3px 8px" onclick="approveTenant(${t.id})">Approve</button>`:''}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function approveTenant(id) {
+  await api('POST',`/api/v1/admin/tenants/${id}/approve`);
+  toast('Tenant approved','ok'); pageTenants();
+}
+</script>
+</body>
+</html>
