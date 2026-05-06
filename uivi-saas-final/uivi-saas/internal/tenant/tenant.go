@@ -118,3 +118,124 @@ func (h *Handler) Approve(c *gin.Context) {
 	h.masterDB.Exec("UPDATE tenants SET status='active' WHERE id=$1", id)
 	c.JSON(200, gin.H{"message": "tenant approved"})
 }
+
+func (h *Handler) Create(c *gin.Context) {
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	// Check slug unique
+	var count int
+	h.masterDB.QueryRow("SELECT COUNT(*) FROM tenants WHERE slug=$1", req.OrgSlug).Scan(&count)
+	if count > 0 {
+		c.JSON(409, gin.H{"error": "org slug already taken"})
+		return
+	}
+	if req.Plan == "" {
+		req.Plan = "free"
+	}
+	_, err := h.masterDB.Exec(`
+		INSERT INTO tenants (name,slug,org_type,country,plan,status,created_at)
+		VALUES ($1,$2,$3,$4,$5,'active',NOW())`,
+		req.OrgName, req.OrgSlug, req.OrgType, req.Country, req.Plan)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "creation failed"})
+		return
+	}
+
+	// Create tenant DB
+	if err := h.createTenantDB(req.OrgSlug); err != nil {
+		c.JSON(500, gin.H{"error": "db creation failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(201, gin.H{
+		"message": "Organization created successfully.",
+		"slug":    req.OrgSlug,
+		"status":  "active",
+	})
+}
+
+func (h *Handler) createTenantDB(slug string) error {
+	// Connect to postgres DB to create the tenant DB
+	dsn := "postgres://uivi:uivi@db:5432/postgres?sslmode=disable" // assuming host is db
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	dbName := strings.ReplaceAll(slug, "-", "_")
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE uivi_%s;", dbName))
+	if err != nil {
+		return err
+	}
+
+	// Connect to the new DB and create tables
+	tenantDSN := fmt.Sprintf("postgres://uivi:uivi@db:5432/uivi_%s?sslmode=disable", dbName)
+	tenantDB, err := sql.Open("postgres", tenantDSN)
+	if err != nil {
+		return err
+	}
+	defer tenantDB.Close()
+
+	// Enable pgcrypto
+	_, err = tenantDB.Exec("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+	if err != nil {
+		return err
+	}
+
+	// Create tables
+	_, err = tenantDB.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id            VARCHAR(64)  PRIMARY KEY,
+			email         VARCHAR(256) NOT NULL UNIQUE,
+			full_name     VARCHAR(256) NOT NULL,
+			role          VARCHAR(32)  NOT NULL,
+			password_hash VARCHAR(256) NOT NULL,
+			is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+			created_at    TIMESTAMP    NOT NULL DEFAULT NOW()
+		);
+		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+		CREATE TABLE IF NOT EXISTS certificates (
+			id              VARCHAR(64)  PRIMARY KEY,
+			uivid           VARCHAR(32)  NOT NULL UNIQUE,
+			credential_hash VARCHAR(64)  NOT NULL UNIQUE,
+			holder_name     VARCHAR(256) NOT NULL,
+			holder_email    VARCHAR(256),
+			holder_dob      VARCHAR(32),
+			degree_type     VARCHAR(64)  NOT NULL,
+			degree_name     VARCHAR(256) NOT NULL,
+			specialization  VARCHAR(256),
+			roll_number     VARCHAR(128) NOT NULL,
+			passing_year    INT          NOT NULL,
+			grade           VARCHAR(64),
+			issuer_id       VARCHAR(64)  NOT NULL,
+			issuer_name     VARCHAR(256) NOT NULL,
+			status          VARCHAR(32)  NOT NULL DEFAULT 'active',
+			revoke_reason   TEXT,
+			created_at      TIMESTAMP    NOT NULL DEFAULT NOW()
+		);
+
+		CREATE TABLE IF NOT EXISTS verifications (
+			id                      VARCHAR(64)  PRIMARY KEY,
+			uivid                   VARCHAR(32)  NOT NULL,
+			candidate_name_provided VARCHAR(256) NOT NULL,
+			verifier_user_id        VARCHAR(64)  NOT NULL,
+			purpose                 VARCHAR(256),
+			result_valid            BOOLEAN      NOT NULL,
+			verified_at             TIMESTAMP    NOT NULL DEFAULT NOW()
+		);
+
+		CREATE TABLE IF NOT EXISTS audit_events (
+			id          VARCHAR(64)  PRIMARY KEY,
+			user_id     VARCHAR(64)  NOT NULL,
+			action      VARCHAR(64)  NOT NULL,
+			details     TEXT,
+			created_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+		);
+	`)
+	return err
+}

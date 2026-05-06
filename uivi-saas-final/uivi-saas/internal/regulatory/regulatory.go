@@ -3,6 +3,7 @@ package regulatory
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/uivi/saas/internal/tenant"
@@ -33,10 +34,10 @@ func (h *Handler) Stats(c *gin.Context) {
 	var totalTenants int
 	h.masterDB.QueryRow("SELECT COUNT(*) FROM tenants WHERE status='active'").Scan(&totalTenants)
 	c.JSON(200, gin.H{
-		"active_tenants": totalTenants,
+		"active_tenants":   totalTenants,
 		"compliance_score": 94,
-		"dpdp_compliant": true,
-		"gdpr_compliant": true,
+		"dpdp_compliant":   true,
+		"gdpr_compliant":   true,
 	})
 }
 
@@ -46,14 +47,17 @@ func (h *Handler) ListInstitutions(c *gin.Context) {
 	defer rows.Close()
 	var list []map[string]interface{}
 	for rows.Next() {
-		var id int; var name, slug, country, status, at string
+		var id int
+		var name, slug, country, status, at string
 		rows.Scan(&id, &name, &slug, &country, &status, &at)
 		list = append(list, map[string]interface{}{
 			"id": id, "name": name, "slug": slug, "country": country,
 			"status": status, "joined": at,
 		})
 	}
-	if list == nil { list = []map[string]interface{}{} }
+	if list == nil {
+		list = []map[string]interface{}{}
+	}
 	c.JSON(http.StatusOK, gin.H{"institutions": list})
 }
 
@@ -71,5 +75,31 @@ func (h *Handler) Compliance(c *gin.Context) {
 }
 
 func (h *Handler) AuditLogs(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Query individual tenant audit logs via /api/v1/user/audit-trail"})
+	rows, err := h.masterDB.Query(`
+		SELECT uivid, tenant_slug, issuer_name, holder_name, status, created_at, revoke_reason
+		FROM certificate_index ORDER BY created_at DESC LIMIT 200`)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "query failed"})
+		return
+	}
+	defer rows.Close()
+	var logs []map[string]interface{}
+	for rows.Next() {
+		var uivid, tenantSlug, issuerName, holderName, status, revokeReason sql.NullString
+		var createdAt time.Time
+		rows.Scan(&uivid, &tenantSlug, &issuerName, &holderName, &status, &createdAt, &revokeReason)
+		logs = append(logs, map[string]interface{}{
+			"uivid":         uivid.String,
+			"tenant_slug":   tenantSlug.String,
+			"issuer_name":   issuerName.String,
+			"holder_name":   holderName.String,
+			"status":        status.String,
+			"created_at":    createdAt,
+			"revoke_reason": revokeReason.String,
+		})
+	}
+	if logs == nil {
+		logs = []map[string]interface{}{}
+	}
+	c.JSON(200, gin.H{"audit_logs": logs, "count": len(logs)})
 }

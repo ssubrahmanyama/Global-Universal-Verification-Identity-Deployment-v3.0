@@ -265,6 +265,7 @@ const NAV_ITEMS = {
   ],
   admin: [
     {id:'tenants',       icon:'🏢', label:'All Tenants'},
+    {id:'fraud-graph',   icon:'🕸', label:'Fraud Graph'},
     {id:'reg-dashboard', icon:'📊', label:'Platform Stats'},
     {id:'my-profile',    icon:'👤', label:'My Profile'},
   ],
@@ -711,7 +712,26 @@ async function pageFraudGraph() {
 // PAGE: Tenants (Admin)
 // ══════════════════════════════════════════════════════════
 async function pageTenants() {
-  html(`<div class="card"><div class="card-title">🏢 All Tenants</div><div id="tl">Loading...</div></div>`);
+  html(`
+  <div class="card">
+    <div class="card-title">➕ Add Institution</div>
+    <div class="fg fg1">
+      <div class="ff"><label>Organization Name</label><input id="tn-name" placeholder="e.g. IIT Bombay"/></div>
+      <div class="ff"><label>Slug (unique)</label><input id="tn-slug" placeholder="e.g. iit-bombay"/></div>
+      <div class="ff"><label>Type</label>
+        <select id="tn-type"><option value="institution">Institution</option><option value="hr">HR Company</option><option value="regulatory">Regulatory</option><option value="government">Government</option></select>
+      </div>
+      <div class="ff"><label>Country</label><input id="tn-country" value="India"/></div>
+      <div class="ff"><label>Plan</label>
+        <select id="tn-plan"><option value="free">Free</option><option value="standard">Standard</option><option value="enterprise">Enterprise</option></select>
+      </div>
+    </div>
+    <button class="btn-sm btn-c" onclick="createTenant()" style="margin-top:.75rem">➕ Create Institution</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🏢 All Tenants</div>
+    <div id="tl">Loading...</div>
+  </div>`);
   const {data} = await api('GET','/api/v1/admin/tenants');
   const tenants = data.tenants||[];
   document.getElementById('tl').innerHTML = `<table class="tbl"><thead><tr><th>Name</th><th>Slug</th><th>Type</th><th>Country</th><th>Plan</th><th>Status</th><th>Action</th></tr></thead>
@@ -720,6 +740,24 @@ async function pageTenants() {
     <td><span class="badge badge-${t.status==='active'?'ok':'warn'}">${t.status}</span></td>
     <td>${t.status==='pending'?`<button class="btn-sm btn-g" style="font-size:.7rem;padding:3px 8px" onclick="approveTenant(${t.id})">Approve</button>`:''}</td>
   </tr>`).join('')}</tbody></table>`;
+}
+
+async function createTenant() {
+  const req = {
+    org_name: document.getElementById('tn-name').value.trim(),
+    org_slug: document.getElementById('tn-slug').value.trim(),
+    org_type: document.getElementById('tn-type').value,
+    country: document.getElementById('tn-country').value.trim(),
+    plan: document.getElementById('tn-plan').value,
+  };
+  if(!req.org_name || !req.org_slug){toast('Name and slug required','err');return;}
+  const {ok,data} = await api('POST','/api/v1/admin/tenants', req);
+  if(ok){
+    toast('Institution created','ok');
+    pageTenants();
+  }else{
+    toast(data.error||'Failed','err');
+  }
 }
 
 async function approveTenant(id) {

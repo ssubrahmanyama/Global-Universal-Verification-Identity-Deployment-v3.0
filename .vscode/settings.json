@@ -1,0 +1,16 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /workspaces/Global-Universal-Verification-Identity-Deployment-v3\\.0/uivi-saas-final/uivi-saas && go test \\./\\.\\.\\.$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/Global-Universal-Verification-Identity-Deployment-v3\\.0/uivi-saas-final/uivi-saas && docker-compose up -d$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^docker exec uivi-saas-db-1 psql -U uivi -d uivi_master -c \"SELECT \\* FROM certificate_index WHERE uivid = 'UIVI-2026-GKHFCCTC'\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
