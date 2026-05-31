@@ -35,6 +35,26 @@ CREATE TABLE IF NOT EXISTS guardian_approvals (
   signature   TEXT,
   approved_at TIMESTAMP DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS certificate_index (
+  uivid          VARCHAR(32) PRIMARY KEY,
+  tenant_slug    VARCHAR(64)  NOT NULL,
+  issuer_name    VARCHAR(256) NOT NULL,
+  holder_name    VARCHAR(256) NOT NULL,
+  holder_email   VARCHAR(256),
+  holder_dob     VARCHAR(32),
+  degree_type    VARCHAR(64)  NOT NULL,
+  degree_name    VARCHAR(256) NOT NULL,
+  specialization VARCHAR(256),
+  roll_number    VARCHAR(128) NOT NULL,
+  passing_year   INT          NOT NULL,
+  grade          VARCHAR(64),
+  status         VARCHAR(32)  NOT NULL DEFAULT 'active',
+  revoke_reason  TEXT,
+  created_at     TIMESTAMP    NOT NULL DEFAULT NOW(),
+  revoked_at     TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_cert_index_tenant_slug ON certificate_index(tenant_slug);
+CREATE INDEX IF NOT EXISTS idx_cert_index_status ON certificate_index(status);
 INSERT INTO tenants (name,slug,org_type,country,plan,status) VALUES
   ('IIT Bombay',       'iit-bombay',   'institution', 'India', 'enterprise', 'active'),
   ('Mumbai University','mumbai-univ',  'institution', 'India', 'standard',   'active'),

@@ -8,17 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/uivi/saas/internal/tenant"
 	"golang.org/x/crypto/bcrypt"
 )
 
+type Pool interface {
+	DB(tenantSlug string) (*sql.DB, error)
+}
+
 type Handler struct {
 	masterDB *sql.DB
-	pool     *tenant.Pool
+	pool     Pool
 	secret   string
 }
 
-func New(masterDB *sql.DB, pool *tenant.Pool, secret string) *Handler {
+func New(masterDB *sql.DB, pool Pool, secret string) *Handler {
 	return &Handler{masterDB, pool, secret}
 }
 
@@ -32,7 +35,6 @@ type RegisterUserRequest struct {
 	TenantSlug string `json:"tenant_slug" binding:"required"`
 	Email      string `json:"email"       binding:"required,email"`
 	Password   string `json:"password"    binding:"required,min=8"`
-	Role       string `json:"role"        binding:"required"` // institution|hr|user|regulatory|fraud_monitor|admin
 	FullName   string `json:"full_name"   binding:"required"`
 }
 
@@ -44,7 +46,8 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	// Validate tenant exists and is active
-	var tenantID int; var tenantName, orgType, status string
+	var tenantID int
+	var tenantName, orgType, status string
 	err := h.masterDB.QueryRow(
 		"SELECT id,name,org_type,status FROM tenants WHERE slug=$1", req.TenantSlug).
 		Scan(&tenantID, &tenantName, &orgType, &status)
@@ -117,21 +120,42 @@ func (h *Handler) RegisterUser(c *gin.Context) {
 		return
 	}
 
+	// Ensure the provided tenant exists and is active before creating users.
+	var tenantID int
+	var tenantName, orgType, status string
+	err := h.masterDB.QueryRow(
+		"SELECT id,name,org_type,status FROM tenants WHERE slug=$1", req.TenantSlug).
+		Scan(&tenantID, &tenantName, &orgType, &status)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid tenant"})
+		return
+	}
+	if status != "active" {
+		c.JSON(403, gin.H{"error": "tenant not yet approved"})
+		return
+	}
+
 	db, err := h.pool.DB(req.TenantSlug)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "tenant db unavailable"})
 		return
 	}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "unable to hash password"})
+		return
+	}
+
 	id := uuid.New().String()
+	role := "user"
 	_, dbErr := db.Exec(`
 		INSERT INTO users(id,email,full_name,role,password_hash,is_active,created_at)
 		VALUES($1,$2,$3,$4,$5,true,NOW())`,
-		id, req.Email, req.FullName, req.Role, string(hash))
+		id, req.Email, req.FullName, role, string(hash))
 	if dbErr != nil {
 		c.JSON(409, gin.H{"error": "email already registered"})
 		return
 	}
-	c.JSON(201, gin.H{"user_id": id, "email": req.Email, "role": req.Role, "tenant": req.TenantSlug})
+	c.JSON(201, gin.H{"user_id": id, "email": req.Email, "role": role, "tenant": req.TenantSlug})
 }
