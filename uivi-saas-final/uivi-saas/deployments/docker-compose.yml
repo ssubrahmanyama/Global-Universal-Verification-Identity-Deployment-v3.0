@@ -5,16 +5,18 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: uivi
-      POSTGRES_PASSWORD: uivi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uivi}
       POSTGRES_DB: uivi_master
-    ports:
-      - "5432:5432"
+    # SECURITY: Do NOT expose Postgres port to host.
+    # Use managed DB (AWS RDS, GCP Cloud SQL) with TLS in production.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U uivi"]
       interval: 5s
       retries: 10
+    networks:
+      - uivi-net
 
   db-init:
     image: postgres:15-alpine
@@ -22,16 +24,20 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGPASSWORD: uivi
+      PGPASSWORD: ${POSTGRES_PASSWORD:-uivi}
     volumes:
       - ./scripts/init-db.sh:/init-db.sh
     entrypoint: ["/bin/sh", "/init-db.sh"]
     restart: "no"
+    networks:
+      - uivi-net
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    # SECURITY: Run behind TLS terminator (nginx, cloud load balancer)
+    # Do NOT expose 8080 to public; route via LB on 443.
     ports:
       - "8080:8080"
     environment:
@@ -39,7 +45,8 @@ services:
       TENANT_DB_HOST: "db"
       TENANT_DB_USER: "uivi"
       TENANT_DB_PASS: "uivi"
-      JWT_SECRET: "uivi-saas-jwt-secret-change-in-prod"
+      JWT_SECRET: "${JWT_SECRET:-change-me-min-32-chars}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://institution.example.com,https://hr.example.com}"
       PORT: "8080"
       GIN_MODE: "release"
     depends_on:
@@ -50,6 +57,12 @@ services:
     restart: unless-stopped
     volumes:
       - ./frontend:/app/frontend:ro
+    networks:
+      - uivi-net
 
 volumes:
   pgdata:
+
+networks:
+  uivi-net:
+    driver: bridge

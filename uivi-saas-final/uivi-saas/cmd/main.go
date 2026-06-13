@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -24,7 +25,15 @@ import (
 func main() {
 	masterDB := mustDB(env("MASTER_DB_URL", "postgres://uivi:uivi@db:5432/uivi_master?sslmode=disable"))
 	pool := tenant.NewPool(env("TENANT_DB_HOST", "db"), env("TENANT_DB_USER", "uivi"), env("TENANT_DB_PASS", "uivi"))
-	secret := env("JWT_SECRET", "uivi-secret-change-in-prod")
+	
+	// SECURITY FIX: Enforce JWT_SECRET presence and minimum length (>=32 chars)
+	secret := env("JWT_SECRET", "")
+	if secret == "" {
+		log.Fatalf("FATAL: JWT_SECRET environment variable must be set for production security")
+	}
+	if len(secret) < 32 {
+		log.Fatalf("FATAL: JWT_SECRET must be at least 32 characters long for HS256; current length=%d", len(secret))
+	}
 
 	authH := auth.New(masterDB, pool, secret)
 	certH := cert.New(pool, masterDB)
@@ -36,12 +45,23 @@ func main() {
 	tenH := tenant.New(masterDB)
 
 	r := gin.Default()
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders: []string{"*"},
-		MaxAge:       12 * time.Hour,
-	}))
+	
+	// SECURITY FIX: Restrict CORS to configured origins instead of wildcard (*)
+	allowedOrigins := env("ALLOWED_ORIGINS", "http://localhost:8080")
+	corsConfig := cors.DefaultConfig()
+	if allowedOrigins == "*" || allowedOrigins == "" {
+		// Default: restrict to localhost for development
+		corsConfig.AllowOrigins = []string{"http://localhost:8080"}
+		log.Printf("WARNING: CORS restricted to localhost. Set ALLOWED_ORIGINS for production (comma-separated).")
+	} else {
+		corsConfig.AllowOrigins = strings.Split(allowedOrigins, ",")
+	}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Authorization", "Content-Type"}
+	corsConfig.AllowCredentials = true
+	corsConfig.MaxAge = 12 * time.Hour
+
+	r.Use(cors.New(corsConfig))
 
 	// Frontend
 	r.Static("/static", "./frontend")
@@ -101,6 +121,7 @@ func main() {
 
 	port := env("PORT", "8080")
 	log.Printf("UIVI SaaS → http://localhost:%s", port)
+	log.Printf("NOTE: Run behind a TLS termination proxy (nginx/load-balancer) in production.")
 	r.Run(":" + port)
 }
 
